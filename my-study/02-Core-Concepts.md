@@ -33,11 +33,11 @@
 ## 13. ETCD For Beginners
 
 ```shell
-./etcdctl set key1 value1
+> ./etcdctl set key1 value1
 ```
 
 ```shell
-./etcdctl get key1
+> ./etcdctl get key1
 ```
 
 ETCDCTL은 API버전 2와 3이 있는데 디폴트는 2버전
@@ -73,7 +73,7 @@ ETCDCTL은 API버전 2와 3이 있는데 디폴트는 2버전
 - **Kube-Controller-Manager** : 마스너 노드 위에 kube-system namespace에 POD로써 존재
 
   ```shell
-  kubectl get pods -n kube-system
+  > kubectl get pods -n kube-system
   ```
 
 ## 18. Kube Scheduler
@@ -123,11 +123,11 @@ worker 노드에 반드시 수동으로 kubelet 설치해야함!!
   - 물론 예외는 있음, 그러나 pod 안에 같은 응용프로그램 컨테이너가 여러개이기보다는 서로 다른 응용프로그램 컨테이너인 경우가 많음 (로컬 호스트)
 
 ```shell
-kubectl run nginx --image nginx 
+> kubectl run nginx --image nginx 
 ```
 
 ```shell
-kubectl get pods
+> kubectl get pods
 ```
 
 ## 22. Pods with YAML
@@ -140,7 +140,6 @@ metadata:
 	labels: # 딕셔너리로 원하는만큼 키-값 쌍 추가 가능
 		app: myapp
 		type: front-end
-		
 spec: # 생성하려는 개체들에 따라 입력해야할 속성이 다름(pod는 containers)
 	containers: # List/Array(여러 개의 컨테이너가 pod 안에 존재할 수 있기 때문)
 		- name: nginx-container # 대시(-)는 리스트의 첫번째 항목을 가리킴
@@ -156,12 +155,133 @@ spec: # 생성하려는 개체들에 따라 입력해야할 속성이 다름(pod
 
 ```
 -- pod 생성
-kubectl create -f [파일이름].yml
+> kubectl create -f [파일이름].yml
 
 -- 사용 가능한 pod 목록 확인
-kubectl get pods
+> kubectl get pods
 
--- kubectl describe pod [POD NAME]
+-- pod 상세정보 조회
+> kubectl describe pod [POD NAME]
+
+-- pod 삭제
+> kubectl delete pod [POD NAME]
 ```
 
 ## 23.Demo - Pods with YAML
+
+## 27. Practice Test - Pods
+
+ https://uklabs.kodekloud.com/topic/practice-test-pods-2/
+
+```
+> kubectl run nginx --image=nginx
+
+> kubectl get pods -o wide
+
+-- dry-run 옵션으로 실제 명령을 실행하지 않고 결과 값만 확인, -o yaml 을 통해서 yaml 형태로 결과 출력
+> kubectl run redis --image=redis123 --dry-run -o yaml
+
+> kubectl run redis --image=redis123 --dry-run=clinet -o yaml
+
+-- 이미 create 된 것 다시 적용할 때
+> kubectl apply -f redis.yaml
+```
+
+![image-20240522232449025](C:\Users\yskim\AppData\Roaming\Typora\typora-user-images\image-20240522232449025.png)
+
+## 29. Recap - ReplicaSets
+
+- Replication Controller 
+
+  - 쿠버네티스 클러스터에 있는 단일 pod의 다중 인스턴스를 실행하도록 고가용성 제공
+
+    pod가 하나여도 사용 가능, 기존의 pod가 다운 됐을 때 자동으로 새 pod를 불러옴
+
+    특정 pod가 항상 실행되도록 보장
+
+  - 클러스터 내 여러 노드에 걸쳐 있음
+  - 수요가 증가했을 때 앱 스케일 조정
+
+  ```yaml
+  apiVersion: v1
+  kind: ReplicationController
+  metadata: # Replication Controller 
+  	name: myapp-rc
+  	labels:
+  		app: myapp
+  		type: front-end	
+  spec: # Replication Controller 
+  	template: # POD 정의 yaml 파일 복사
+  		metadata: # POD
+              name: myapp-pod
+              labels:
+                  app: myapp
+                  type: front-end
+          spec: # POD
+              containers:
+                  - name: nginx-container
+                    image: nginx
+                    
+  	replicas: 3
+  ```
+
+  
+
+- Replica Set
+
+  - Replication Controller와 비슷하지만 같진 않음, 좀 더 새로운 권장 방법
+  - pod를 모니터링 하면서 하나가 다운되면 새 pod 배포
+  - labels로 어떤 pod을 모니터링할지 판단함 (Replication Controller 와의 차이점)
+
+```yaml
+apiVersion: apps/v1
+kind: ReplicationSet
+metadata:
+	name: myapp-replicaset
+	labels:
+		app: myapp
+		type: front-end
+spec:
+	template:
+		metadata:
+            name: myapp-pod
+            labels:
+                app: myapp
+                type: front-end
+        spec:
+            containers:
+                - name: nginx-container
+                  image: nginx
+   
+	replicas: 3
+	selector:
+		matchLabels:
+			type: front-end
+```
+
+replicas (복제 개수) 를 변경하는 방법
+
+```
+-- yaml 파일 수정 후 대체 명령
+> kubectl replace -f [파일이름].yaml
+
+> kubectl scale --replicas=6 -f [파일이름].yaml
+> kubectl scale --replicas=6 replicaset [replicaset NAME]
+```
+
+| DESIRED                | CURRENT                  | READY                           |
+| ---------------------- | ------------------------ | ------------------------------- |
+| replicas에 설정한 개수 | 실제 동작중인 pod의 개수 | 사용할 준비가 완료된 pod의 개수 |
+
+
+
+```
+-- 이미 정의된 오브젝트 수정
+> kubectl edit [TYPE] [NAME]
+
+-- 타입 설명 조회
+> kubectl explain [TYPE]
+```
+
+
+
